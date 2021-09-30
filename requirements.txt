@@ -1,0 +1,6 @@
+hvac==0.11.2
+ConfigArgParse==1.5.2
+
+# CI
+pylint==2.11.1
+mypy==0.910
