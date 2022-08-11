@@ -1,6 +1,6 @@
 hvac==0.11.2
-ConfigArgParse==1.5.2
+ConfigArgParse==1.5.3
 
 # CI
-pylint==2.11.1
-mypy==0.910
+pylint==2.14.5
+mypy==0.971

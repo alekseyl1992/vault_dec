@@ -12,11 +12,11 @@ def parse_args():
         auto_env_var_prefix='VAULT_',
     )
     parser.add_argument('--addr', help='Vault address', required=True)
-    parser.add_argument('--token', help='Pattern to search for', required=True)
-    parser.add_argument('--pattern', help='Pattern to search for', default=r'''vault:([^\s'"]+)''')
+    parser.add_argument('--token', help='Vault token', required=True)
     parser.add_argument('--namespace', help='Vault namespace', default=None)
+    parser.add_argument('--pattern', help='Pattern to search for', default=r'''vault:([^\s'"]+)''')
     parser.add_argument('--prefix', help='Common vault key prefix', default='')
-    parser.add_argument('files', help='Files to decrypt', nargs='+')
+    parser.add_argument('files', help='Files to decrypt or \'-\' to read from stdin', nargs='+')
 
     return parser.parse_args()
 
@@ -27,8 +27,11 @@ def main():
     client = hvac.Client(url=args.addr, token=args.token, namespace=args.namespace)
 
     for file_name in args.files:
-        with open(file_name, 'r', encoding='utf8') as f_in:
-            data = f_in.read()
+        if file_name != '-':
+            with open(file_name, 'r', encoding='utf8') as f_in:
+                data = f_in.read()
+        else:
+            data = sys.stdin.read()
 
         for match in re.finditer(
             pattern=args.pattern,
@@ -47,10 +50,13 @@ def main():
 
             data = data.replace(substr, value)
 
-            print(f'Replaced "{key}" value')
+            print(f'Replaced "{key}" value', file=sys.stderr)
 
-        with open(file_name, 'w', encoding='utf8') as f_out:
-            f_out.write(data)
+        if file_name != '-':
+            with open(file_name, 'w', encoding='utf8') as f_out:
+                f_out.write(data)
+        else:
+            sys.stdout.write(data)
 
 
 if __name__ == '__main__':
