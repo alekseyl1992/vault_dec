@@ -48,7 +48,7 @@ def main():
             value = value.get('data', {}).get('data', {}).get('value')
             assert value is not None, f'Value for key "{key}| is not set'
 
-            data = data.replace(substr, value)
+            data = data.replace(substr, value, 1)
 
             print(f'Replaced "{key}" value', file=sys.stderr)
 
