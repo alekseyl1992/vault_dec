@@ -4,6 +4,7 @@ from pathlib import PurePosixPath
 
 import configargparse
 import hvac
+from hvac.exceptions import InvalidPath
 
 
 def parse_args():
@@ -38,19 +39,33 @@ def main():
             string=data,
         ):
             substr = match.group(0)
-            key = match.group(1)
-            if args.prefix and not key.startswith('/'):
-                key = str(PurePosixPath('/') / args.prefix / key)
+            path_group = match.group(1)
+            if args.prefix and not path_group.startswith('/'):
+                path_group = str(PurePosixPath('/') / args.prefix / path_group)
 
-            _, mount_point, path = key.split('/', maxsplit=2)
+            _, mount_point, path_segment = path_group.split('/', maxsplit=2)
 
-            value = client.secrets.kv.v2.read_secret_version(path=path, mount_point=mount_point)
-            value = value.get('data', {}).get('data', {}).get('value')
-            assert value is not None, f'Value for key "{key}| is not set'
+            if ':' in path_segment:
+                path, key = path_segment.split(':')
+            else:
+                path, key = path_segment, 'value'
+
+            full_path = f'{path}:{key}'
+
+            try:
+                value = client.secrets.kv.v2.read_secret_version(path=path, mount_point=mount_point)
+            except InvalidPath:
+                print(f'ERROR: Value for key "{full_path}" is not set', file=sys.stderr)
+                sys.exit(1)
+
+            value = value.get('data', {}).get('data', {}).get(key)
+            if value is None:
+                print(f'ERROR: Value for key "{full_path}" is not set', file=sys.stderr)
+                sys.exit(1)
 
             data = data.replace(substr, value, 1)
 
-            print(f'Replaced "{key}" value', file=sys.stderr)
+            print(f'Replaced "{full_path}" value', file=sys.stderr)
 
         if file_name != '-':
             with open(file_name, 'w', encoding='utf8') as f_out:
